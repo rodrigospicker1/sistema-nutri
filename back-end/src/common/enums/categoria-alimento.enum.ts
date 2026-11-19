@@ -1,0 +1,9 @@
+export enum CategoriaAlimento {
+  FRUTA = 'FRUTA',
+  LEGUME = 'LEGUME',
+  VERDURA = 'VERDURA',
+  CEREAL_GRAO = 'CEREAL_GRAO',
+  PROTEINA = 'PROTEINA',
+  LATICINIO = 'LATICINIO',
+  OUTROS = 'OUTROS',
+}

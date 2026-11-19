@@ -1,0 +1,8 @@
+export enum StatusCardapio {
+  ATIVO = 'ATIVO',
+  INATIVO = 'INATIVO',
+  NOVO = 'NOVO',
+  EM_ALTERACAO = 'EM_ALTERACAO',
+  EM_ANALISE_EMPRESA = 'EM_ANALISE_EMPRESA',
+  PRONTO = 'PRONTO',
+}

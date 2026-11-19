@@ -1,0 +1,5 @@
+export enum NivelRestricaoFnde {
+  PERMITIDO = 'PERMITIDO',
+  OFERTA_LIMITADA = 'OFERTA_LIMITADA',
+  PROIBIDO = 'PROIBIDO',
+}

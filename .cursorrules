@@ -1,0 +1,13 @@
+# Workspace: Sistema de Alimentação Escolar (PNAE / SME)
+
+- Antes de criar ou alterar módulo, endpoint, DTO, schema ou tela, leia `docs/ARQUITETURA_E_FLUXOS.md` e siga os nomes de campos, enums, travas de empenho e relacionamentos descritos lá.
+- O empenho liga `contrato_horti`, cardápio mensal e lista de compras. Não grave consumo no empenho: o saldo para novo empenho é `qtdTotalLicitada` menos a soma dos empenhos ativos; o consumido virá de `listas_compras`.
+- Não crie collection nem módulo de `contrato_terceirizada`. Esse contrato vive em outro banco.
+- Estrutura Monorepo:
+  - `/back-end`: NestJS + Mongoose (MongoDB) + Swagger + class-validator.
+  - `/front-end`: Nuxt 3 (ou Vue 3) + TypeScript + Tailwind CSS.
+- Regra de Ouro de Modelagem:
+  - `Alimento` é uma lista 100% plana (sem `alimentoPaiId`), com `composicaoNutricional` como objeto aninhado.
+  - `Cardapio` é unificado (`MODELO` e `MENSAL`), dividido em `CardapioDia` (com `numeroSemana` 1..5 e `tipoDia`) e `CardapioRefeicao` (com array `itens` suportando operador `E` / `OU`).
+  - Integrações externas (Erudio) usam apenas IDs numéricos (`erudioEtapaId`, `erudioUnidadeEnsinoId`, `erudioMatriculaId`). Antes de mockar ou integrar o Erudio, leia `docs/INTEGRACAO_ERUDIO_MOCKS.md`. O banco legado não tem `tipo: 'CEI'`, etapas infantis 1–7, turno só `MATUTINO`/`VESPERTINO`/`INTEGRAL` nem CRN. O mock guarda o recorte real (`tipo_id`, etapas 20/21/22/23/17/18/10 e 1–9, turnos 1–4, `letivo` 0/1, grupo de usuário). Toda leitura do Erudio passa por `IErudioProvider` no back-end (`src/integrations/erudio`) e por `useErudioMock` no front-end. Não espalhe unidade, etapa, matrícula, calendário ou usuário hardcoded em componente ou service. O adapter traduz o legado para o DTO da nutrição (exemplo: `tipoId === 1` → `CEI`). CRN fica no Mongo da nutrição, ligado a `erudioUsuarioId`.
+- Foco atual do Front-end: Prototipação funcional rica com formulários completos, tabelas de visualização, grade semanal de cardápio e mocks realistas (usando dados do Berçário 1 / Hortifruti) para validação de campos com a equipe de nutrição.

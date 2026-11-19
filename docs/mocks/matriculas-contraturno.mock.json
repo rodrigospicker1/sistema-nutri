@@ -1,0 +1,41 @@
+{
+  "descricao": "Vínculos de enturmação (edu_enturmacao + edu_turma + edu_matricula) para a regra de contraturno. Cobre turno único, turno integral, contraturno em 2 unidades e uma transferência com dataEncerramento. Datas ISO; dataEncerramento null = vigente.",
+  "alocacaoAlmocoContraturnoPadrao": "TURNO_MATUTINO",
+  "configuracoesAlmocoContraturno": [
+    { "erudioUnidadeEnsinoId": 16147, "nomeEscola": "ADÉLIA RUSSI SILVA", "ofereceAlmocoContraturno": true },
+    { "erudioUnidadeEnsinoId": 16140, "nomeEscola": "ÂNGELA DALÇÓQUIO DE SOUZA", "ofereceAlmocoContraturno": true },
+    { "erudioUnidadeEnsinoId": 16151, "nomeEscola": "ARNALDO BRANDÃO", "ofereceAlmocoContraturno": true },
+    { "erudioUnidadeEnsinoId": 16158, "nomeEscola": "ANNINHA LINHARES DE MIRANDA", "ofereceAlmocoContraturno": true },
+    { "erudioUnidadeEnsinoId": 16163, "nomeEscola": "ANTÔNIO JOÃO VICENTE", "ofereceAlmocoContraturno": true },
+    { "erudioUnidadeEnsinoId": 16166, "nomeEscola": "AUGUSTO BENTO DE OLIVEIRA", "ofereceAlmocoContraturno": false }
+  ],
+  "enturmacoes": [
+    { "erudioEnturmacaoId": 90001, "erudioMatriculaId": 1001, "erudioAlunoId": 5000, "erudioUnidadeEnsinoId": 16147, "nomeEscola": "ADÉLIA RUSSI SILVA", "erudioEtapaId": 1, "erudioTurnoId": 1, "dataEfetivacao": "2026-02-01", "dataEncerramento": null },
+    { "erudioEnturmacaoId": 90002, "erudioMatriculaId": 1002, "erudioAlunoId": 5001, "erudioUnidadeEnsinoId": 16140, "nomeEscola": "ÂNGELA DALÇÓQUIO DE SOUZA", "erudioEtapaId": 2, "erudioTurnoId": 1, "dataEfetivacao": "2026-02-01", "dataEncerramento": null },
+    { "erudioEnturmacaoId": 90003, "erudioMatriculaId": 1017, "erudioAlunoId": 5016, "erudioUnidadeEnsinoId": 16140, "nomeEscola": "ÂNGELA DALÇÓQUIO DE SOUZA", "erudioEtapaId": 21, "erudioTurnoId": 2, "dataEfetivacao": "2026-02-01", "dataEncerramento": null },
+    { "erudioEnturmacaoId": 90004, "erudioMatriculaId": 1025, "erudioAlunoId": 5024, "erudioUnidadeEnsinoId": 16158, "nomeEscola": "ANNINHA LINHARES DE MIRANDA", "erudioEtapaId": 1, "erudioTurnoId": 2, "dataEfetivacao": "2026-02-01", "dataEncerramento": null },
+    { "erudioEnturmacaoId": 90005, "erudioMatriculaId": 1031, "erudioAlunoId": 5030, "erudioUnidadeEnsinoId": 16147, "nomeEscola": "ADÉLIA RUSSI SILVA", "erudioEtapaId": 1, "erudioTurnoId": 3, "dataEfetivacao": "2026-02-01", "dataEncerramento": null },
+    { "erudioEnturmacaoId": 90006, "erudioMatriculaId": 1043, "erudioAlunoId": 6000, "erudioUnidadeEnsinoId": 16163, "nomeEscola": "ANTÔNIO JOÃO VICENTE", "erudioEtapaId": 1, "erudioTurnoId": 4, "dataEfetivacao": "2026-02-01", "dataEncerramento": null },
+    { "erudioEnturmacaoId": 90007, "erudioMatriculaId": 1044, "erudioAlunoId": 6001, "erudioUnidadeEnsinoId": 16158, "nomeEscola": "ANNINHA LINHARES DE MIRANDA", "erudioEtapaId": 2, "erudioTurnoId": 4, "dataEfetivacao": "2026-02-01", "dataEncerramento": null },
+    { "erudioEnturmacaoId": 90010, "erudioMatriculaId": 1051, "erudioAlunoId": 7001, "erudioUnidadeEnsinoId": 16147, "nomeEscola": "ADÉLIA RUSSI SILVA", "erudioEtapaId": 16, "erudioTurnoId": 1, "dataEfetivacao": "2026-02-01", "dataEncerramento": null },
+    { "erudioEnturmacaoId": 90011, "erudioMatriculaId": 1052, "erudioAlunoId": 7001, "erudioUnidadeEnsinoId": 16158, "nomeEscola": "ANNINHA LINHARES DE MIRANDA", "erudioEtapaId": 20, "erudioTurnoId": 2, "dataEfetivacao": "2026-02-01", "dataEncerramento": null },
+    { "erudioEnturmacaoId": 90012, "erudioMatriculaId": 1053, "erudioAlunoId": 7002, "erudioUnidadeEnsinoId": 16140, "nomeEscola": "ÂNGELA DALÇÓQUIO DE SOUZA", "erudioEtapaId": 2, "erudioTurnoId": 1, "dataEfetivacao": "2026-02-01", "dataEncerramento": null },
+    { "erudioEnturmacaoId": 90013, "erudioMatriculaId": 1054, "erudioAlunoId": 7002, "erudioUnidadeEnsinoId": 16166, "nomeEscola": "AUGUSTO BENTO DE OLIVEIRA", "erudioEtapaId": 21, "erudioTurnoId": 2, "dataEfetivacao": "2026-02-01", "dataEncerramento": null },
+    { "erudioEnturmacaoId": 90014, "erudioMatriculaId": 1055, "erudioAlunoId": 7003, "erudioUnidadeEnsinoId": 16151, "nomeEscola": "ARNALDO BRANDÃO", "erudioEtapaId": 1, "erudioTurnoId": 1, "dataEfetivacao": "2026-02-01", "dataEncerramento": null },
+    { "erudioEnturmacaoId": 90015, "erudioMatriculaId": 1056, "erudioAlunoId": 7003, "erudioUnidadeEnsinoId": 16163, "nomeEscola": "ANTÔNIO JOÃO VICENTE", "erudioEtapaId": 23, "erudioTurnoId": 2, "dataEfetivacao": "2026-02-01", "dataEncerramento": null },
+    { "erudioEnturmacaoId": 90016, "erudioMatriculaId": 1057, "erudioAlunoId": 7004, "erudioUnidadeEnsinoId": 16147, "nomeEscola": "ADÉLIA RUSSI SILVA", "erudioEtapaId": 20, "erudioTurnoId": 1, "dataEfetivacao": "2026-02-01", "dataEncerramento": null },
+    { "erudioEnturmacaoId": 90017, "erudioMatriculaId": 1058, "erudioAlunoId": 7004, "erudioUnidadeEnsinoId": 16158, "nomeEscola": "ANNINHA LINHARES DE MIRANDA", "erudioEtapaId": 16, "erudioTurnoId": 2, "dataEfetivacao": "2026-02-01", "dataEncerramento": null },
+    { "erudioEnturmacaoId": 90018, "erudioMatriculaId": 1059, "erudioAlunoId": 7005, "erudioUnidadeEnsinoId": 16158, "nomeEscola": "ANNINHA LINHARES DE MIRANDA", "erudioEtapaId": 21, "erudioTurnoId": 1, "dataEfetivacao": "2026-02-01", "dataEncerramento": null },
+    { "erudioEnturmacaoId": 90019, "erudioMatriculaId": 1060, "erudioAlunoId": 7005, "erudioUnidadeEnsinoId": 16140, "nomeEscola": "ÂNGELA DALÇÓQUIO DE SOUZA", "erudioEtapaId": 1, "erudioTurnoId": 2, "dataEfetivacao": "2026-02-01", "dataEncerramento": null },
+    { "erudioEnturmacaoId": 90020, "erudioMatriculaId": 1061, "erudioAlunoId": 7006, "erudioUnidadeEnsinoId": 16163, "nomeEscola": "ANTÔNIO JOÃO VICENTE", "erudioEtapaId": 23, "erudioTurnoId": 1, "dataEfetivacao": "2026-02-01", "dataEncerramento": null },
+    { "erudioEnturmacaoId": 90021, "erudioMatriculaId": 1062, "erudioAlunoId": 7006, "erudioUnidadeEnsinoId": 16151, "nomeEscola": "ARNALDO BRANDÃO", "erudioEtapaId": 2, "erudioTurnoId": 2, "dataEfetivacao": "2026-02-01", "dataEncerramento": null },
+    { "erudioEnturmacaoId": 90022, "erudioMatriculaId": 1063, "erudioAlunoId": 7007, "erudioUnidadeEnsinoId": 16166, "nomeEscola": "AUGUSTO BENTO DE OLIVEIRA", "erudioEtapaId": 16, "erudioTurnoId": 1, "dataEfetivacao": "2026-02-01", "dataEncerramento": null },
+    { "erudioEnturmacaoId": 90023, "erudioMatriculaId": 1064, "erudioAlunoId": 7007, "erudioUnidadeEnsinoId": 16147, "nomeEscola": "ADÉLIA RUSSI SILVA", "erudioEtapaId": 20, "erudioTurnoId": 2, "dataEfetivacao": "2026-02-01", "dataEncerramento": null },
+    { "erudioEnturmacaoId": 90024, "erudioMatriculaId": 1065, "erudioAlunoId": 7008, "erudioUnidadeEnsinoId": 16158, "nomeEscola": "ANNINHA LINHARES DE MIRANDA", "erudioEtapaId": 1, "erudioTurnoId": 1, "dataEfetivacao": "2026-02-01", "dataEncerramento": null },
+    { "erudioEnturmacaoId": 90025, "erudioMatriculaId": 1066, "erudioAlunoId": 7008, "erudioUnidadeEnsinoId": 16140, "nomeEscola": "ÂNGELA DALÇÓQUIO DE SOUZA", "erudioEtapaId": 21, "erudioTurnoId": 2, "dataEfetivacao": "2026-02-01", "dataEncerramento": null },
+    { "erudioEnturmacaoId": 90030, "erudioMatriculaId": 1100, "erudioAlunoId": 8000, "erudioUnidadeEnsinoId": 16147, "nomeEscola": "ADÉLIA RUSSI SILVA", "erudioEtapaId": 10, "erudioTurnoId": 1, "dataEfetivacao": "2026-02-01", "dataEncerramento": "2026-08-03" },
+    { "erudioEnturmacaoId": 90031, "erudioMatriculaId": 1101, "erudioAlunoId": 8000, "erudioUnidadeEnsinoId": 16158, "nomeEscola": "ANNINHA LINHARES DE MIRANDA", "erudioEtapaId": 11, "erudioTurnoId": 1, "dataEfetivacao": "2026-08-03", "dataEncerramento": null },
+    { "erudioEnturmacaoId": 90032, "erudioMatriculaId": 1102, "erudioAlunoId": 8001, "erudioUnidadeEnsinoId": 16151, "nomeEscola": "ARNALDO BRANDÃO", "erudioEtapaId": 5, "erudioTurnoId": 1, "dataEfetivacao": "2026-01-01", "dataEncerramento": null },
+    { "erudioEnturmacaoId": 90033, "erudioMatriculaId": 1103, "erudioAlunoId": 8001, "erudioUnidadeEnsinoId": 16163, "nomeEscola": "ANTÔNIO JOÃO VICENTE", "erudioEtapaId": 5, "erudioTurnoId": 1, "dataEfetivacao": "2026-05-01", "dataEncerramento": null }
+  ]
+}

@@ -1,0 +1,9 @@
+export enum CategoriaVisualGrupoIncidencia {
+  PROTEINA = 'PROTEINA',
+  AMIDO = 'AMIDO',
+  BEBIDAS = 'BEBIDAS',
+  CEREAIS = 'CEREAIS',
+  ACOMPANHAMENTO = 'ACOMPANHAMENTO',
+  PREPARACOES = 'PREPARACOES',
+  OUTROS = 'OUTROS',
+}

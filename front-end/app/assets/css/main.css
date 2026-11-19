@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Fraunces", ui-serif, Georgia, serif;
+  --color-ink: #1b2a22;
+  --color-forest: #17352b;
+  --color-canopy: #245443;
+  --color-leaf: #2f6b4f;
+  --color-moss: #e6f0ea;
+  --color-cream: #f3efe6;
+  --color-paper: #fbf8f3;
+  --color-line: #e4dcd0;
+  --color-clay: #9c4630;
+  --color-honey: #b77724;
+  --color-honey-soft: #f8ecd8;
+}
+
+@layer base {
+  html {
+    @apply bg-paper text-ink antialiased;
+  }
+
+  body {
+    @apply min-h-screen font-sans;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    @apply outline-none;
+  }
+}
+
+@layer components {
+  .campo {
+    @apply w-full rounded-lg border border-line bg-white px-3 py-2 text-sm;
+  }
+
+  .botao-primario {
+    @apply rounded-lg bg-forest px-4 py-2 text-sm font-semibold text-white hover:bg-canopy;
+  }
+
+  .botao-secundario {
+    @apply rounded-lg border border-line bg-white px-4 py-2 text-sm hover:bg-cream;
+  }
+}

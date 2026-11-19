@@ -1,0 +1,6 @@
+export enum TipoDiaCardapio {
+  LETIVO = 'LETIVO',
+  FERIADO = 'FERIADO',
+  REUNIAO_PEDAGOGICA = 'REUNIAO_PEDAGOGICA',
+  RECESSO = 'RECESSO',
+}

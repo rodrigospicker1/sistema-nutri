@@ -1,0 +1,5 @@
+export enum StatusExecucaoDia {
+  NAO_AVALIADO = 'NAO_AVALIADO',
+  CUMPRIDO = 'CUMPRIDO',
+  NAO_CUMPRIDO = 'NAO_CUMPRIDO',
+}

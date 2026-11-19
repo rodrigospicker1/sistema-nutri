@@ -1,0 +1,5 @@
+export enum StatusSafra {
+  SAFRA_PLENA = 'SAFRA_PLENA',
+  MEDIA_PRODUCAO = 'MEDIA_PRODUCAO',
+  FORA_SAFRA = 'FORA_SAFRA',
+}
