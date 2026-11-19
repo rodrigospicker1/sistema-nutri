@@ -1,0 +1,23 @@
+# Blueprint de deploy do back-end no Render (https://render.com/docs/blueprint-spec)
+# Uso: Render Dashboard → New → Blueprint → conectar este repositório.
+# O Render cria o web service automaticamente e pede as env vars marcadas como secret.
+services:
+  - type: web
+    name: sistema-nutri-api
+    runtime: node
+    plan: free
+    rootDir: back-end
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false # secret — preencher no dashboard (MongoDB Atlas)
+      - key: CORS_ORIGIN
+        sync: false # ex.: https://seu-app.vercel.app
+      - key: OBSERVE_APP_KEY
+        sync: false # opcional — observabilidade NestJS
+      - key: OBSERVE_APP_SECRET
+        sync: false # opcional

@@ -8,7 +8,10 @@ async function bootstrap() {
     instrument: ObserveInstrument,
   });
 
-  app.enableCors();
+  // CORS_ORIGIN: lista separada por vírgula (ex.: "https://app.vercel.app").
+  // Ausente = permite qualquer origem (apenas dev local).
+  const origens = process.env.CORS_ORIGIN?.split(',').map((o) => o.trim()).filter(Boolean);
+  app.enableCors(origens?.length ? { origin: origens } : undefined);
 
   app.useGlobalPipes(
     new ValidationPipe({
