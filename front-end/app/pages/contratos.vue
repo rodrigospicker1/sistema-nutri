@@ -2,6 +2,10 @@
   <div class="space-y-5">
     <div class="grid gap-4 lg:grid-cols-[18rem_1fr]">
       <div class="space-y-2">
+        <button type="button" class="botao-primario w-full" @click="abrirContratoForm(null)">Novo contrato</button>
+        <p v-if="contratos.length === 0" class="rounded-2xl border border-dashed border-line bg-white px-4 py-6 text-center text-sm text-ink/50">
+          Nenhum contrato cadastrado.
+        </p>
         <button
           v-for="contrato in contratos"
           :key="contrato.id"
@@ -29,7 +33,10 @@
                 · {{ moeda(valorContratado(selecionado)) }}
               </p>
             </div>
-            <button type="button" class="botao-primario" @click="historicoAberto = true">Registrar reajuste / aditivo</button>
+            <div class="flex gap-2">
+              <button type="button" class="botao-secundario" @click="abrirContratoForm(selecionado)">Editar dados</button>
+              <button type="button" class="botao-primario" @click="historicoAberto = true">Registrar reajuste / aditivo</button>
+            </div>
           </div>
           <p class="mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold" :class="selecionado.agriculturaFamiliar ? 'bg-moss text-leaf' : 'bg-cream text-ink/70'">
             Agricultura familiar: {{ selecionado.agriculturaFamiliar ? 'sim' : 'não' }}
@@ -43,6 +50,7 @@
                 <th class="px-4 py-3">Alimento</th>
                 <th class="px-4 py-3">Unidade</th>
                 <th class="px-4 py-3">Valor unitário</th>
+                <th class="px-4 py-3">g/unid.</th>
                 <th class="px-4 py-3">Qtd. licitada</th>
                 <th class="px-4 py-3">Entrega</th>
                 <th class="px-4 py-3">Ativo</th>
@@ -59,6 +67,17 @@
                 </td>
                 <td class="px-4 py-3">
                   <input v-model.number="item.valorUnitario" type="number" min="0" step="0.01" class="campo w-28! py-1.5! text-sm" @input="marcarSujo" />
+                </td>
+                <td class="px-4 py-3">
+                  <input
+                    v-model.number="item.gramasPorUnidade"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    class="campo w-24! py-1.5! text-sm"
+                    :disabled="item.unidadeMedida === 'KG' || item.unidadeMedida === 'GRAMA'"
+                    @input="marcarSujo"
+                  />
                 </td>
                 <td class="px-4 py-3">
                   <input v-model.number="item.qtdTotalLicitada" type="number" min="0" step="1" class="campo w-28! py-1.5! text-sm" @input="marcarSujo" />
@@ -85,7 +104,7 @@
                 </td>
               </tr>
               <tr v-if="itensEdicao.length === 0">
-                <td colspan="7" class="px-4 py-6 text-center text-sm text-ink/50">Nenhum item no contrato.</td>
+                <td colspan="8" class="px-4 py-6 text-center text-sm text-ink/50">Nenhum item no contrato.</td>
               </tr>
             </tbody>
           </table>
@@ -228,19 +247,86 @@
         <button type="submit" class="botao-primario">Registrar alteração</button>
       </form>
     </UiModal>
+
+    <UiModal
+      :aberto="contratoFormAberto"
+      painel
+      :titulo="contratoForm.id ? 'Editar contrato' : 'Novo contrato'"
+      descricao="Dados cadastrais do contrato de hortifruti. Os itens são editados na tabela do contrato."
+      @fechar="contratoFormAberto = false"
+    >
+      <form class="space-y-3" @submit.prevent="salvarContratoForm">
+        <div class="grid gap-3 sm:grid-cols-2">
+          <label class="text-sm">
+            Número do contrato
+            <input v-model="contratoForm.numeroContrato" required class="campo mt-1" placeholder="045/2026" />
+          </label>
+          <label class="text-sm">
+            Fornecedor
+            <input v-model="contratoForm.fornecedorNome" required class="campo mt-1" />
+          </label>
+          <label class="text-sm sm:col-span-2">
+            CNPJ do fornecedor
+            <input v-model="contratoForm.fornecedorCnpj" required class="campo mt-1" placeholder="00.000.000/0000-00" />
+          </label>
+          <label class="text-sm">
+            Início da vigência
+            <input v-model="contratoForm.vigenciaInicio" required type="date" class="campo mt-1" />
+          </label>
+          <label class="text-sm">
+            Fim da vigência
+            <input v-model="contratoForm.vigenciaFim" required type="date" class="campo mt-1" />
+          </label>
+          <label class="flex items-center gap-2 text-sm">
+            <input v-model="contratoForm.agriculturaFamiliar" type="checkbox" class="h-4 w-4 accent-leaf" />
+            Agricultura familiar (meta de 45% do PNAE)
+          </label>
+          <label class="flex items-center gap-2 text-sm">
+            <input v-model="contratoForm.arredondamentoTotalAlimentos" type="checkbox" class="h-4 w-4 accent-leaf" />
+            Arredondar totais de alimentos para cima
+          </label>
+          <label v-if="contratoForm.id" class="flex items-center gap-2 text-sm">
+            <input v-model="contratoForm.ativo" type="checkbox" class="h-4 w-4 accent-leaf" />
+            Contrato ativo
+          </label>
+        </div>
+        <p v-if="erroContrato" class="text-sm text-clay">{{ erroContrato }}</p>
+        <div class="flex justify-end gap-2">
+          <button type="button" class="botao-secundario" @click="contratoFormAberto = false">Cancelar</button>
+          <button type="submit" class="botao-primario" :disabled="salvandoContrato">
+            {{ salvandoContrato ? 'Salvando…' : 'Salvar contrato' }}
+          </button>
+        </div>
+      </form>
+    </UiModal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { moeda, numero, rotuloEvento, rotuloUnidade, valorContratado } from '../../src/mocks/nutricao.mock'
 import { TIPOS_EVENTO_ITEM, UNIDADES_MEDIDA } from '../../src/types/nutricao'
-import type { ItemHortifruti } from '../../src/types/nutricao'
+import type { ContratoHorti, ItemHortifruti } from '../../src/types/nutricao'
 
-const { alimentos, contratos, eventos, empenhos, registrarAlteracao, salvarItensContrato, saldoItem } = useNutricao()
+const { alimentos, contratos, eventos, empenhos, registrarAlteracao, salvarItensContrato, salvarContrato, saldoItem } = useNutricao()
 
-const contratoHortiId = ref('ct-kmj')
+const contratoHortiId = ref('')
 const historicoAberto = ref(false)
 const erro = ref('')
+const contratoFormAberto = ref(false)
+const salvandoContrato = ref(false)
+const erroContrato = ref('')
+const hoje = new Date().toISOString().slice(0, 10)
+const contratoForm = reactive({
+  id: '',
+  numeroContrato: '',
+  fornecedorNome: '',
+  fornecedorCnpj: '',
+  agriculturaFamiliar: false,
+  vigenciaInicio: hoje,
+  vigenciaFim: hoje,
+  arredondamentoTotalAlimentos: false,
+  ativo: true,
+})
 
 const alteracao = reactive({
   tipoEvento: 'REAJUSTE_PRECO' as (typeof TIPOS_EVENTO_ITEM)[number],
@@ -301,6 +387,7 @@ function adicionarItem() {
     valorUnitario: 0,
     perCapita: null,
     fatorCorrecao: null,
+    gramasPorUnidade: null,
     diasSemanaEntrega: [1, 3, 5],
     ativo: true,
   })
@@ -345,6 +432,42 @@ function largura(alimentoId: string) {
 function alternarDia(dia: number) {
   if (alteracao.diasSemanaEntrega.includes(dia)) alteracao.diasSemanaEntrega = alteracao.diasSemanaEntrega.filter((item) => item !== dia)
   else alteracao.diasSemanaEntrega.push(dia)
+}
+
+function abrirContratoForm(contrato: ContratoHorti | null) {
+  contratoForm.id = contrato?.id ?? ''
+  contratoForm.numeroContrato = contrato?.numeroContrato ?? ''
+  contratoForm.fornecedorNome = contrato?.fornecedorNome ?? ''
+  contratoForm.fornecedorCnpj = contrato?.fornecedorCnpj ?? ''
+  contratoForm.agriculturaFamiliar = contrato?.agriculturaFamiliar ?? false
+  contratoForm.vigenciaInicio = contrato ? String(contrato.vigenciaInicio).slice(0, 10) : hoje
+  contratoForm.vigenciaFim = contrato ? String(contrato.vigenciaFim).slice(0, 10) : hoje
+  contratoForm.arredondamentoTotalAlimentos = contrato?.arredondamentoTotalAlimentos ?? false
+  contratoForm.ativo = contrato?.ativo ?? true
+  erroContrato.value = ''
+  contratoFormAberto.value = true
+}
+
+async function salvarContratoForm() {
+  salvandoContrato.value = true
+  erroContrato.value = ''
+  const erro = await salvarContrato({
+    id: contratoForm.id || undefined,
+    numeroContrato: contratoForm.numeroContrato.trim(),
+    fornecedorNome: contratoForm.fornecedorNome.trim(),
+    fornecedorCnpj: contratoForm.fornecedorCnpj,
+    agriculturaFamiliar: contratoForm.agriculturaFamiliar,
+    vigenciaInicio: `${contratoForm.vigenciaInicio}T00:00:00.000Z`,
+    vigenciaFim: `${contratoForm.vigenciaFim}T00:00:00.000Z`,
+    arredondamentoTotalAlimentos: contratoForm.arredondamentoTotalAlimentos,
+    ativo: contratoForm.ativo,
+  })
+  salvandoContrato.value = false
+  if (erro) {
+    erroContrato.value = erro
+    return
+  }
+  contratoFormAberto.value = false
 }
 
 async function enviarAlteracao() {

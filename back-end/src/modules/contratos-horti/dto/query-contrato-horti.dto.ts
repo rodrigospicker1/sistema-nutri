@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsBoolean, IsDate, IsOptional, IsString } from 'class-validator';
 import { ToBoolean } from '../../../common/transforms/to-boolean.transform.js';
 
 export class QueryContratoHortiDto {
@@ -7,6 +8,17 @@ export class QueryContratoHortiDto {
   @IsOptional()
   @IsString()
   fornecedorNome?: string;
+
+  @ApiPropertyOptional({ description: 'Trecho do número do contrato' })
+  @IsOptional()
+  @IsString()
+  numeroContrato?: string;
+
+  @ApiPropertyOptional({ type: String, format: 'date-time', description: 'Filtra contratos vigentes nesta data' })
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  vigenteEm?: Date;
 
   @ApiPropertyOptional({ type: Boolean })
   @IsOptional()

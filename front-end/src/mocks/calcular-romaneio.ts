@@ -10,6 +10,8 @@ export interface ItemPendente {
   saldoDisponivel?: number;
   quantidadeAlocada?: number;
   unidadeMedida?: string;
+  /** RATEIO_INSUFICIENTE: soma dos saldos de todos os empenhos candidatos do alimento. */
+  saldoTotalDisponivel?: number;
 }
 
 export interface SubstituicaoAplicada {
@@ -40,6 +42,8 @@ export interface CandidatoEmpenho {
   numeroEmpenho: string;
   valorUnitario: number;
   saldoDisponivel: number;
+  /** ISO — ordena o rateio sugerido (vence primeiro consome primeiro). */
+  dataFim?: string;
 }
 
 export interface AlocacaoItemConsolidado {
@@ -62,6 +66,8 @@ export interface ItemConsolidado {
   alocacoes: AlocacaoItemConsolidado[];
   totalAlocado: number;
   valorTotal: number;
+  /** true quando `alocacoes` veio da sugestão automática do motor (sem rateio manual). */
+  rateioSugerido?: boolean;
 }
 
 export interface RateioEmpenho {
@@ -80,4 +86,25 @@ export interface ResultadoRomaneio {
   itensPendentes: ItemPendente[];
   consolidado: ItemConsolidado[];
   romaneio: RomaneioEscola[];
+  /** Rateios efetivamente aplicados por alimento (manuais ou sugeridos). */
+  alocacoesEfetivas: AlocacaoAlimento[];
+}
+
+/** Documento persistido por POST /listas-compras/gerar (GET /listas-compras/:id). */
+export interface ListaCompras {
+  id: string
+  /** Contrato principal (legado); listas multi-contrato usam contratoHortiIds. */
+  contratoHortiId?: string
+  contratoHortiIds?: string[]
+  datasConsumo: string[]
+  erudioEtapaIds?: number[]
+  erudioUnidadeEnsinoIds?: number[]
+  status: 'RASCUNHO' | 'GERADA' | 'CONFIRMADA' | 'CANCELADA'
+  datasConsideradas: string[]
+  datasIgnoradas: string[]
+  consolidado: ItemConsolidado[]
+  romaneio: RomaneioEscola[]
+  alocacoes: AlocacaoAlimento[]
+  itensPendentes: ItemPendente[]
+  createdAt?: string
 }

@@ -52,9 +52,9 @@ export class ContratosHortiController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Busca um contrato de hortifruti pelo identificador' })
-  findOne(@Param('id', ParseObjectIdPipe) id: string): Promise<ContratoHortiDocument> {
-    return this.contratosHortiService.findOne(id);
+  @ApiOperation({ summary: 'Busca um contrato de hortifruti pelo identificador, com saldo de empenho por item' })
+  findOne(@Param('id', ParseObjectIdPipe) id: string): Promise<Record<string, unknown>> {
+    return this.contratosHortiService.findOneComSaldos(id);
   }
 
   @Patch(':id')

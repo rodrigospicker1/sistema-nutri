@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { ArrayNotEmpty, IsArray, IsDate, IsMongoId, IsNumber, IsOptional, ValidateNested } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import { ArrayNotEmpty, IsArray, IsBoolean, IsDate, IsInt, IsMongoId, IsNumber, IsOptional, ValidateNested } from 'class-validator';
 
 export class RateioEmpenhoDto {
   @ApiProperty()
@@ -25,9 +25,11 @@ export class AlocacaoAlimentoDto {
 }
 
 export class SimularListaComprasDto {
-  @ApiProperty()
+  @ApiPropertyOptional({ description: 'Opcional: restringe candidatos de empenho e itens de contrato a este contrato; ausente/vazio = todos os contratos ativos' })
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsMongoId()
-  contratoHortiId: string;
+  contratoHortiId?: string;
 
   @ApiProperty({ type: [String], format: 'date-time' })
   @IsArray()
@@ -42,4 +44,21 @@ export class SimularListaComprasDto {
   @ValidateNested({ each: true })
   @Type(() => AlocacaoAlimentoDto)
   alocacoes?: AlocacaoAlimentoDto[];
+
+  @ApiPropertyOptional({ description: 'Somente no gerar: grava como RASCUNHO (não abate o saldo dos empenhos)' })
+  @IsOptional()
+  @IsBoolean()
+  rascunho?: boolean;
+
+  @ApiPropertyOptional({ type: [Number], description: 'Restringe o cálculo a estas etapas de ensino (vazio/ausente = todas)' })
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  erudioEtapaIds?: number[];
+
+  @ApiPropertyOptional({ type: [Number], description: 'Restringe o cálculo a estas unidades de ensino (vazio/ausente = todas)' })
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  erudioUnidadeEnsinoIds?: number[];
 }

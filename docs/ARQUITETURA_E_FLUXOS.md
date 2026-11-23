@@ -27,7 +27,7 @@ O contrato de prestação de serviço (terceirizada) **não é collection deste 
 | `execucoes_refeicao_dia` | Modelo previsto. Sem módulo até o fluxo correspondente ser pedido |
 | `incidencias_regra` | CRUD em `/incidencias-regras` e validação `POST /cardapios/:id/validar-incidencias`. Grupos continuam em `/grupos-incidencia` |
 
-No back-end o saldo de novo empenho é `qtdTotalLicitada − soma dos empenhos ativos`. O consumo real é a soma das `listas_compras` com status `GERADA` vinculadas ao `empenhoId`, e não um campo gravado no empenho. No protótipo, `qtdConsumida` abre a barra e cada pedido gerado em `/listas-compras` abate de novo esse saldo.
+No back-end o saldo de novo empenho é `qtdTotalLicitada − soma dos empenhos ativos`. O consumo real é a soma das `listas_compras` `CONFIRMADA`/`GERADA` vinculadas ao `empenhoId` (detalhe em `docs/FLUXO_LISTA_COMPRAS.md`), e não um campo gravado no empenho. No protótipo, `qtdConsumida` abre a barra e cada pedido gerado em `/listas-compras` abate de novo esse saldo.
 
 ## Fluxo 1 — Contratos de hortifruti e empenhos
 
@@ -50,7 +50,10 @@ Travas do `EmpenhosService`:
 - A soma de `qtdEmpenhada` dos empenhos ativos daquele alimento, no mesmo contrato, não ultrapassa `qtdTotalLicitada`. Igual ao teto é permitido.
 - Empenho inativo não entra na soma. Na edição, o próprio documento é excluído da soma antes de somar a quantidade nova.
 - Número do empenho é único por `contratoHortiId`.
-- Itens do contrato só mudam por `POST /contratos-horti/:id/itens/alteracoes`, que grava `contratos_horti_historico`. O histórico recusa update e delete.
+- Itens do contrato só mudam por `PUT /contratos-horti/:id/itens` (substituição direta, usada pela tela) ou `POST /contratos-horti/:id/itens/alteracoes` (evento auditado no `contratos_horti_historico`). O histórico recusa update e delete.
+- `gramasPorUnidade` é obrigatório (> 0) quando `unidadeMedida` é `UNIDADE`, `MACO` ou `DUZIA`; para `LITRO` sem o campo, o sistema assume 1000 g/unidade. `KG`/`GRAMA` não usam o campo.
+- Item de contrato **com empenho ativo** não pode alterar `unidadeMedida` nem `gramasPorUnidade` (trava em inclusão/inativação via alteração de item).
+- `GET /contratos-horti/:id` devolve o contrato com `qtdEmpenhada` e `saldoDisponivel` (`qtdTotalLicitada − empenhado`) calculados por item a partir dos empenhos ativos.
 
 Saldo físico e financeiro, por alimento do empenho:
 
@@ -90,15 +93,13 @@ Regras do cardápio:
 
 ## Fluxo 3 — Lista de compras (romaneio de hortifruti)
 
-Implementado em `ListasComprasService`. `simular` não grava; `gerar` grava `listas_compras` com status `GERADA` e esse total passa a abater o saldo do empenho. A trava de negócio:
+Implementado em `ListasComprasService`. O pipeline completo (escopo por datas/escolas/etapas, explosão de fichas, alimentação especial, rateio sugerido entre empenhos e ciclo de vida da lista) está detalhado em `docs/FLUXO_LISTA_COMPRAS.md`. Resumo:
 
-1. A nutricionista escolhe as datas de consumo.
-2. Todo hortifruti do período precisa de `empenhoId` ativo com saldo. Sem isso a lista não fecha.
-3. O Nutri consulta no Erudio os alunos ativos por `erudioUnidadeEnsinoId` e `erudioEtapaId`.
-4. A ficha técnica explode os ingredientes. Em grupo com operador `OU`, só entram itens com `ativoParaCompra: true`.
-5. Alimentação especial `DEFERIDO` troca o item `NAO_UTILIZA` pelo item `UTILIZA` da mesma `categoria`.
-6. A consolidação agrupa por empenho, abate o saldo e aplica `Math.ceil` quando `contrato_horti.arredondamentoTotalAlimentos` é verdadeiro.
-7. O romaneio sai por unidade de ensino, com os dias de entrega do item do contrato.
+1. `POST /listas-compras/simular` calcula sem gravar; `POST /listas-compras/gerar` grava `CONFIRMADA` (ou `RASCUNHO` com `rascunho: true`).
+2. `contratoHortiId` é **opcional**: sem ele, itens de todos os contratos ativos são candidatos e o empenho alocado define o contrato de cada alimento; a lista grava `contratoHortiIds[]` com os contratos tocados.
+3. Somente listas `CONFIRMADA` (e `GERADA` legada) abatem o saldo dos empenhos; `RASCUNHO` e `CANCELADA` não. `PATCH /:id/confirmar` revalida o saldo; `PATCH /:id/cancelar` libera.
+4. Sem rateio manual, o motor sugere a divisão entre empenhos ordenando por `dataFim` (vence primeiro) e sinaliza `RATEIO_INSUFICIENTE` com `saldoTotalDisponivel` quando o saldo total não cobre.
+5. `GET /empenhos/saldo-concorrente` (todos os contratos) e `GET /empenhos/saldo-concorrente/:contratoHortiId` expõem `qtdEmpenhada`, `qtdAlocada` e `saldoDisponivel` por alimento/empenho.
 
 ## Fluxo 4 — Auditoria diária na escola
 
@@ -145,7 +146,9 @@ Compra e entrega física. Campos obrigatórios, sem ramo de terceirizada.
 
 - `numeroContrato`, `fornecedorNome`, `fornecedorCnpj`, `agriculturaFamiliar`
 - `vigenciaInicio`, `vigenciaFim`, `arredondamentoTotalAlimentos`, `ativo`
-- `itens[]`: `alimentoId`, `unidadeMedida`, `qtdTotalLicitada`, `valorUnitario`, `perCapita`, `fatorCorrecao`, `diasSemanaEntrega` (0..6, únicos), `ativo`
+- `itens[]`: `alimentoId`, `unidadeMedida`, `qtdTotalLicitada`, `valorUnitario`, `perCapita`, `fatorCorrecao`, `gramasPorUnidade` (obrigatório para `UNIDADE`/`MACO`/`DUZIA`; `LITRO` assume 1000 g quando nulo), `diasSemanaEntrega` (0..6, únicos), `ativo`
+
+Rotas: `POST /contratos-horti` (cria), `GET /contratos-horti` (filtros `fornecedorNome`, `numeroContrato`, `vigenteEm`, `ativo`, `agriculturaFamiliar`), `GET /:id` (com saldos de empenho por item), `PATCH /:id` (dados gerais, sem itens), `DELETE /:id`, `GET /:id/historico`, `PUT /:id/itens`, `POST /:id/itens/alteracoes`.
 
 `agriculturaFamiliar: true` entra na meta legal de 45% do PNAE. O denominador da meta também inclui o valor da prestação de serviço que vive no outro sistema.
 
@@ -168,6 +171,7 @@ Endpoints de leitura para cardápio e lista:
 
 - `GET /empenhos/saldo-disponivel/:contratoHortiId` — teto, já empenhado e restante de cada item ativo.
 - `GET /empenhos/ativos-por-alimento/:alimentoId` — empenhos ativos que reservam aquele alimento, para o seletor de `empenhoId`.
+- `GET /empenhos/saldo-concorrente[/:contratoHortiId]` — saldo concorrente por alimento/empenho (`qtdEmpenhada − qtdAlocada` em listas confirmadas); sem id agrega todos os contratos ativos.
 
 ### `incidencias_regra`
 
@@ -197,12 +201,19 @@ Faixa por agrupamento de cardápio: mínimos e máximos de energia, proteína, l
 
 ### `listas_compras`
 
-`contratoHortiId`, `datasConsumo`, `status` `GERADA`, dias considerados e ignorados, consolidado por `empenhoId` e romaneio por `erudioUnidadeEnsinoId` com `substituicoesAplicadas`. Gerar a lista exige empenho ativo e saldo para cada hortifruti do período.
+`contratoHortiId` (opcional, retrocompat) + `contratoHortiIds[]` (contratos dos empenhos alocados), `datasConsumo`, `erudioEtapaIds`/`erudioUnidadeEnsinoIds` (escopo do cálculo), `status` (`RASCUNHO`, `CONFIRMADA`, `CANCELADA`, `GERADA` legado), dias considerados e ignorados, `consolidado`, `romaneio` por `erudioUnidadeEnsinoId` com `substituicoesAplicadas`, `alocacoes` (rateios por alimento) e `itensPendentes`. Detalhes em `docs/FLUXO_LISTA_COMPRAS.md`.
 
 ### `demandas_escolares` (leitura)
 
 `erudioUnidadeEnsinoId`, `erudioEtapaId`, `nomeEscola`, `alunosAtivos`. O `ErudioAdapterService` lê essa collection para multiplicar o per capita.
 
-## Front-end de validação
+## Front-end
 
-O protótipo em `/front-end` usa `src/mocks/nutricao.mock.ts` e o estado de `useNutricao` para a equipe de nutrição conferir campos. Telas: visão geral, alimentos, contratos de hortifruti, empenhos, fichas técnicas, cardápios e lista de compras. Dados de referência: Berçário 1, Laranja Pera, Batata Doce Roxa, Macarrão Integral, KMJ e CoopaFren.
+O front-end Nuxt/Vue (`/front-end`) consome a API real via `app/composables/useNutricao.ts` (estado global com `useState`) e `useErudioMock.ts` (dados escolares do Erudio). `src/mocks/` concentra tipos e helpers de exibição; a lógica de cálculo replica o motor do back-end apenas para referência.
+
+Telas:
+
+- **Contratos de hortifruti** (`/contratos`): lista lateral + detalhe. Cria contrato (`POST`), edita dados gerais (`PATCH`), substitui itens (`PUT /:id/itens`, com coluna `g/unid.` para `gramasPorUnidade`), visualiza empenhado/disponível por item (`GET /:id` já traz os saldos) e registra alterações auditadas (`POST /:id/itens/alteracoes` + histórico).
+- **Empenhos** (`/empenhos`): cadastro por contrato com previsão mensal e saldo disponível para empenhar.
+- **Lista de compras** (`/listas-compras`): período + escopo (etapas/escolas), rateio sugerido editável por empenho, saldo concorrente inline, salvar rascunho / gerar confirmada, e histórico com confirmar/cancelar. Detalhes em `docs/FLUXO_LISTA_COMPRAS.md`.
+- Demais telas: visão geral, alimentos, fichas técnicas, cardápios, alimentação especial, referências PNAE e regras de incidência/refeição.

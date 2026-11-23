@@ -185,6 +185,8 @@ export interface ItemHortifruti {
   valorUnitario: number
   perCapita: number | null
   fatorCorrecao: number | null
+  /** Gramas por unidade de compra (MACO/UNIDADE/DUZIA/LITRO); nulo para KG/GRAMA. */
+  gramasPorUnidade?: number | null
   diasSemanaEntrega: number[]
   ativo: boolean
 }
@@ -422,4 +424,29 @@ export interface AdaptacaoPerfil {
   restricoesIds: string[]
   ativo: boolean
   overrides: AdaptacaoOverride[]
+}
+
+export const STATUS_LISTA_COMPRAS = ['RASCUNHO', 'GERADA', 'CONFIRMADA', 'CANCELADA'] as const
+export type StatusListaCompras = (typeof STATUS_LISTA_COMPRAS)[number]
+
+export interface SaldoEmpenhoAlimento {
+  empenhoId: string
+  numeroEmpenho: string
+  fonteRecurso: string
+  dataInicio: string
+  dataFim: string
+  qtdEmpenhada: number
+  qtdAlocada: number
+  saldoDisponivel: number
+}
+
+/** GET /empenhos/saldo-concorrente/:contratoHortiId — por alimento do contrato. */
+export interface SaldoConcorrenteAlimento {
+  alimentoId: string
+  unidadeMedida: string
+  qtdTotalLicitada: number
+  qtdEmpenhada: number
+  qtdAlocada: number
+  qtdDisponivel: number
+  empenhos: SaldoEmpenhoAlimento[]
 }

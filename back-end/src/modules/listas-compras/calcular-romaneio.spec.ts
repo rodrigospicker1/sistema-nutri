@@ -155,6 +155,104 @@ describe('calcularRomaneio', () => {
       expect.objectContaining({ alimentoId: 'laranja', motivo: 'RATEIO_INSUFICIENTE', quantidadeNecessaria: 2, quantidadeAlocada: 1 }),
     ]);
   });
+
+  it('sugere rateio entre empenhos esgotando primeiro o que vence antes', () => {
+    const dados = entrada({
+      especiais: [],
+      empenhos: [
+        {
+          id: 'emp-tardio',
+          contratoHortiId: 'ct',
+          numeroEmpenho: '2026NE0002',
+          ativo: true,
+          dataFim: new Date('2026-12-31'),
+          itensEmpenhados: [{ alimentoId: 'laranja', qtdEmpenhada: 10, unidadeMedida: UnidadeMedida.KG, valorUnitario: 3.4 }],
+        },
+        {
+          id: 'emp-cedo',
+          contratoHortiId: 'ct',
+          numeroEmpenho: '2026NE0001',
+          ativo: true,
+          dataFim: new Date('2026-06-30'),
+          itensEmpenhados: [{ alimentoId: 'laranja', qtdEmpenhada: 1, unidadeMedida: UnidadeMedida.KG, valorUnitario: 3.4 }],
+        },
+        {
+          id: 'emp-b',
+          contratoHortiId: 'ct',
+          numeroEmpenho: '2026NE00488',
+          ativo: true,
+          dataFim: new Date('2026-12-31'),
+          itensEmpenhados: [{ alimentoId: 'banana', qtdEmpenhada: 10, unidadeMedida: UnidadeMedida.KG, valorUnitario: 3.9 }],
+        },
+      ],
+    });
+    const resultado = calcularRomaneio(dados);
+    expect(resultado.itensPendentes).toEqual([]);
+    const laranja = resultado.consolidado.find((item) => item.alimentoId === 'laranja');
+    expect(laranja?.rateioSugerido).toBe(true);
+    expect(laranja?.alocacoes.map((alocacao) => [alocacao.empenhoId, alocacao.quantidade])).toEqual([
+      ['emp-cedo', 1],
+      ['emp-tardio', 1],
+    ]);
+    expect(laranja?.totalAlocado).toBe(2);
+    expect(resultado.alocacoesEfetivas).toEqual([
+      { alimentoId: 'laranja', rateios: [{ empenhoId: 'emp-cedo', quantidade: 1 }, { empenhoId: 'emp-tardio', quantidade: 1 }] },
+    ]);
+  });
+
+  it('alerta déficit quando o saldo total dos empenhos não cobre a demanda', () => {
+    const dados = entrada({
+      especiais: [],
+      empenhos: [
+        {
+          id: 'emp',
+          contratoHortiId: 'ct',
+          numeroEmpenho: '2026NE00421',
+          ativo: true,
+          dataFim: new Date('2026-12-31'),
+          itensEmpenhados: [{ alimentoId: 'laranja', qtdEmpenhada: 1, unidadeMedida: UnidadeMedida.KG, valorUnitario: 3.4 }],
+        },
+        {
+          id: 'emp-b',
+          contratoHortiId: 'ct',
+          numeroEmpenho: '2026NE00488',
+          ativo: true,
+          dataFim: new Date('2026-12-31'),
+          itensEmpenhados: [{ alimentoId: 'banana', qtdEmpenhada: 10, unidadeMedida: UnidadeMedida.KG, valorUnitario: 3.9 }],
+        },
+      ],
+    });
+    const resultado = calcularRomaneio(dados);
+    expect(resultado.itensPendentes).toEqual([
+      expect.objectContaining({
+        alimentoId: 'laranja',
+        motivo: 'RATEIO_INSUFICIENTE',
+        quantidadeNecessaria: 2,
+        quantidadeAlocada: 1,
+        saldoTotalDisponivel: 1,
+      }),
+    ]);
+    const laranja = resultado.consolidado.find((item) => item.alimentoId === 'laranja');
+    expect(laranja?.rateioSugerido).toBe(true);
+    expect(laranja?.alocacoes).toEqual([expect.objectContaining({ empenhoId: 'emp', quantidade: 1, saldoRestante: 0 })]);
+  });
+
+  it('filtra o escopo por unidade de ensino', () => {
+    const dados = entrada({ especiais: [], erudioUnidadeEnsinoIds: [501] });
+    const resultado = calcularRomaneio(dados);
+    const laranja = resultado.consolidado.find((item) => item.alimentoId === 'laranja');
+    // Só a unidade 501 (8 alunos) entra: 150 g × 8 = 1,2 kg
+    expect(laranja?.quantidadeCalculada).toBe(1.2);
+    expect(resultado.romaneio.length).toBeGreaterThan(0);
+    expect(resultado.romaneio.every((escola) => escola.erudioUnidadeEnsinoId === 501)).toBe(true);
+  });
+
+  it('filtra o escopo por etapa de ensino', () => {
+    const dados = entrada({ erudioEtapaIds: [999] });
+    const resultado = calcularRomaneio(dados);
+    expect(resultado.consolidado).toEqual([]);
+    expect(resultado.romaneio).toEqual([]);
+  });
 });
 
 function entradaContraturno(parcial: Partial<EntradaRomaneio> = {}): EntradaRomaneio {

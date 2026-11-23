@@ -11,7 +11,7 @@ import {
   VALOR_PRESTACAO_SERVICO_EXTERNA,
   valorContratado,
 } from '../../src/mocks/nutricao.mock'
-import type { AlocacaoAlimento, ResultadoRomaneio } from '../../src/mocks/calcular-romaneio'
+import type { AlocacaoAlimento, ListaCompras, ResultadoRomaneio } from '../../src/mocks/calcular-romaneio'
 import { REFEICOES } from '../../src/types/nutricao'
 import type {
   AgrupamentoCardapio,
@@ -32,6 +32,7 @@ import type {
   TipoDia,
   TipoRefeicao,
   UnidadeMedida,
+  SaldoConcorrenteAlimento,
 } from '../../src/types/nutricao'
 
 function novoId(prefixo: string): string {
@@ -46,6 +47,18 @@ export interface NovoCardapioModeloInput {
   refeicoes: RefeicaoId[]
   observacoesCozinha: string
   nutricionistasResponsaveisIds: number[]
+}
+
+export interface ContratoHortiInput {
+  id?: string
+  numeroContrato: string
+  fornecedorNome: string
+  fornecedorCnpj: string
+  agriculturaFamiliar: boolean
+  vigenciaInicio: string
+  vigenciaFim: string
+  arredondamentoTotalAlimentos: boolean
+  ativo?: boolean
 }
 
 export interface AlteracaoItemInput {
@@ -210,6 +223,20 @@ export function useNutricao() {
     substituir(fichas, normalizar<FichaTecnica>(resposta), true)
   }
 
+  /** Cria (sem id) ou atualiza os dados cadastrais do contrato (com id). Itens vão por salvarItensContrato. */
+  async function salvarContrato(entrada: ContratoHortiInput): Promise<string | null> {
+    const { id, ...corpo } = entrada
+    try {
+      const resposta = id
+        ? await api<DocApi>(`/contratos-horti/${id}`, { method: 'PATCH', body: corpo })
+        : await api<DocApi>('/contratos-horti', { method: 'POST', body: corpo })
+      substituir(contratos, normalizar<ContratoHorti>(resposta), true)
+      return null
+    } catch (erro) {
+      return mensagemErro(erro, 'Não foi possível salvar o contrato.')
+    }
+  }
+
   async function registrarAlteracao(contratoHortiId: string, entrada: AlteracaoItemInput): Promise<string | null> {
     try {
       const contratoApi = await api<DocApi>(`/contratos-horti/${contratoHortiId}/itens/alteracoes`, {
@@ -247,36 +274,95 @@ export function useNutricao() {
       .reduce((soma, item) => soma + item.qtdEmpenhada, 0)
   }
 
+  interface EscopoLista {
+    erudioEtapaIds?: number[]
+    erudioUnidadeEnsinoIds?: number[]
+  }
+
+  function corpoLista(contratoHortiId: string | undefined, datas: string[], escopo?: EscopoLista) {
+    return {
+      ...(contratoHortiId ? { contratoHortiId } : {}),
+      datasConsumo: datas.map((data) => new Date(`${data}T00:00:00.000Z`)),
+      ...(escopo?.erudioEtapaIds?.length ? { erudioEtapaIds: escopo.erudioEtapaIds } : {}),
+      ...(escopo?.erudioUnidadeEnsinoIds?.length ? { erudioUnidadeEnsinoIds: escopo.erudioUnidadeEnsinoIds } : {}),
+    }
+  }
+
   async function simularLista(
-    contratoHortiId: string,
+    contratoHortiId: string | undefined,
     datas: string[],
-    gravar: boolean,
     alocacoes?: AlocacaoAlimento[],
+    escopo?: EscopoLista,
   ): Promise<ResultadoRomaneio | string> {
     if (datas.length === 0) return 'Selecione ao menos uma data de consumo.'
-    const corpo = {
-      contratoHortiId,
-      datasConsumo: datas.map((data) => new Date(`${data}T00:00:00.000Z`)),
-      ...(alocacoes ? { alocacoes } : {}),
-    }
-    let resultado: ResultadoRomaneio
     try {
-      resultado = await api<ResultadoRomaneio>('/listas-compras/simular', { method: 'POST', body: corpo })
+      return await api<ResultadoRomaneio>('/listas-compras/simular', {
+        method: 'POST',
+        body: { ...corpoLista(contratoHortiId, datas, escopo), ...(alocacoes ? { alocacoes } : {}) },
+      })
     } catch (erro) {
-      const dados = (erro as { data?: { itensPendentes?: ResultadoRomaneio['itensPendentes'] } })?.data
-      if (dados?.itensPendentes) {
-        return { datasConsideradas: [], datasIgnoradas: [], itensPendentes: dados.itensPendentes, consolidado: [], romaneio: [] }
-      }
       return mensagemErro(erro, 'Não foi possível simular a lista de compras.')
     }
-    if (gravar) {
-      try {
-        await api('/listas-compras/gerar', { method: 'POST', body: corpo })
-      } catch (erro) {
-        return mensagemErro(erro, 'A simulação passou, mas a lista não foi gravada.')
-      }
+  }
+
+  async function gerarLista(
+    contratoHortiId: string | undefined,
+    datas: string[],
+    opcoes?: { alocacoes?: AlocacaoAlimento[]; rascunho?: boolean; escopo?: EscopoLista },
+  ): Promise<ListaCompras | string> {
+    if (datas.length === 0) return 'Selecione ao menos uma data de consumo.'
+    try {
+      const doc = await api<DocApi>('/listas-compras/gerar', {
+        method: 'POST',
+        body: {
+          ...corpoLista(contratoHortiId, datas, opcoes?.escopo),
+          ...(opcoes?.alocacoes ? { alocacoes: opcoes.alocacoes } : {}),
+          ...(opcoes?.rascunho ? { rascunho: true } : {}),
+        },
+      })
+      return normalizar<ListaCompras>(doc)
+    } catch (erro) {
+      return mensagemErro(erro, 'Não foi possível gravar a lista de compras.')
     }
-    return resultado
+  }
+
+  async function listarListas(contratoHortiId?: string): Promise<ListaCompras[] | string> {
+    try {
+      const docs = await api<DocApi[]>('/listas-compras', {
+        query: contratoHortiId ? { contratoHortiId } : {},
+      })
+      return normalizarLista<ListaCompras>(docs)
+    } catch (erro) {
+      return mensagemErro(erro, 'Não foi possível carregar as listas de compras.')
+    }
+  }
+
+  async function confirmarLista(id: string): Promise<ListaCompras | string> {
+    try {
+      const doc = await api<DocApi>(`/listas-compras/${id}/confirmar`, { method: 'PATCH' })
+      return normalizar<ListaCompras>(doc)
+    } catch (erro) {
+      return mensagemErro(erro, 'Não foi possível confirmar a lista de compras.')
+    }
+  }
+
+  async function cancelarLista(id: string): Promise<ListaCompras | string> {
+    try {
+      const doc = await api<DocApi>(`/listas-compras/${id}/cancelar`, { method: 'PATCH' })
+      return normalizar<ListaCompras>(doc)
+    } catch (erro) {
+      return mensagemErro(erro, 'Não foi possível cancelar a lista de compras.')
+    }
+  }
+
+  /** Saldo concorrente por alimento/empenho: empenhado − alocado em listas confirmadas. */
+  async function saldoConcorrente(contratoHortiId?: string): Promise<SaldoConcorrenteAlimento[] | string> {
+    try {
+      const docs = await api<SaldoConcorrenteAlimento[]>(contratoHortiId ? `/empenhos/saldo-concorrente/${contratoHortiId}` : '/empenhos/saldo-concorrente')
+      return docs
+    } catch (erro) {
+      return mensagemErro(erro, 'Não foi possível carregar o saldo concorrente dos empenhos.')
+    }
   }
 
   async function salvarTipoRefeicao(tipo: { id?: string; nome: string; ordem?: number; ativo?: boolean }): Promise<string | null> {
@@ -512,8 +598,14 @@ export function useNutricao() {
     salvarFicha,
     registrarAlteracao,
     salvarItensContrato,
+    salvarContrato,
     criarEmpenho,
     simularLista,
+    gerarLista,
+    listarListas,
+    confirmarLista,
+    cancelarLista,
+    saldoConcorrente,
     jaEmpenhado,
     saldoItem,
     definirTipoDia,

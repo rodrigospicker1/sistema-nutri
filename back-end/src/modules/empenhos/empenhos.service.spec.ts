@@ -3,6 +3,7 @@ import { getModelToken } from '@nestjs/mongoose';
 import { Test } from '@nestjs/testing';
 import { UnidadeMedida } from '../../common/enums/index.js';
 import { ContratoHorti } from '../contratos-horti/schemas/contrato-horti.schema.js';
+import { ListaCompras } from '../listas-compras/schemas/lista-compras.schema.js';
 import type { CreateEmpenhoDto } from './dto/create-empenho.dto.js';
 import { EmpenhosService } from './empenhos.service.js';
 import { Empenho } from './schemas/empenho.schema.js';
@@ -66,6 +67,10 @@ describe('EmpenhosService', () => {
           provide: getModelToken(ContratoHorti.name),
           useValue: { findById: vi.fn().mockReturnValue({ exec: vi.fn().mockResolvedValue(contratoHortifruti()) }) },
         },
+        {
+          provide: getModelToken(ListaCompras.name),
+          useValue: { find: vi.fn().mockReturnValue({ exec: vi.fn().mockResolvedValue([]) }) },
+        },
       ],
     })
       .compile()
@@ -128,6 +133,10 @@ describe('EmpenhosService', () => {
           provide: getModelToken(ContratoHorti.name),
           useValue: { findById: vi.fn().mockReturnValue({ exec: vi.fn().mockResolvedValue(contrato) }) },
         },
+        {
+          provide: getModelToken(ListaCompras.name),
+          useValue: { find: vi.fn().mockReturnValue({ exec: vi.fn().mockResolvedValue([]) }) },
+        },
       ],
     }).compile();
     const service = module.get(EmpenhosService);
@@ -160,6 +169,10 @@ describe('EmpenhosService', () => {
           provide: getModelToken(ContratoHorti.name),
           useValue: { findById: vi.fn().mockReturnValue({ exec: vi.fn().mockResolvedValue(contrato) }) },
         },
+        {
+          provide: getModelToken(ListaCompras.name),
+          useValue: { find: vi.fn().mockReturnValue({ exec: vi.fn().mockResolvedValue([]) }) },
+        },
       ],
     }).compile();
     const service = module.get(EmpenhosService);
@@ -187,6 +200,10 @@ describe('EmpenhosService', () => {
           provide: getModelToken(ContratoHorti.name),
           useValue: { findById: vi.fn().mockReturnValue({ exec: vi.fn().mockResolvedValue(contrato) }) },
         },
+        {
+          provide: getModelToken(ListaCompras.name),
+          useValue: { find: vi.fn().mockReturnValue({ exec: vi.fn().mockResolvedValue([]) }) },
+        },
       ],
     }).compile();
     const service = module.get(EmpenhosService);
@@ -198,5 +215,73 @@ describe('EmpenhosService', () => {
         itensEmpenhados: [expect.objectContaining({ gramasPorUnidade: 250 })],
       }),
     );
+  });
+
+  it('saldo concorrente abate apenas listas confirmadas e ordena por vencimento', async () => {
+    const itemEmpenhado = (qtd: number) => ({
+      alimentoId: { toString: () => ALIMENTO_ID },
+      qtdEmpenhada: qtd,
+      unidadeMedida: UnidadeMedida.KG,
+      valorUnitario: 4.5,
+    });
+    const module = await Test.createTestingModule({
+      providers: [
+        EmpenhosService,
+        {
+          provide: getModelToken(Empenho.name),
+          useValue: {
+            find: vi.fn().mockReturnValue({
+              exec: vi.fn().mockResolvedValue([
+                {
+                  _id: { toString: () => 'emp-tardio' },
+                  numeroEmpenho: '2026NE0002',
+                  fonteRecurso: 'PNAE',
+                  dataInicio: new Date('2026-02-01'),
+                  dataFim: new Date('2026-08-31'),
+                  itensEmpenhados: [itemEmpenhado(60)],
+                },
+                {
+                  _id: { toString: () => 'emp-cedo' },
+                  numeroEmpenho: '2026NE0001',
+                  fonteRecurso: 'PNAE',
+                  dataInicio: new Date('2026-02-01'),
+                  dataFim: new Date('2026-05-31'),
+                  itensEmpenhados: [itemEmpenhado(40)],
+                },
+              ]),
+            }),
+          },
+        },
+        {
+          provide: getModelToken(ContratoHorti.name),
+          useValue: { findById: vi.fn().mockReturnValue({ exec: vi.fn().mockResolvedValue(contratoHortifruti()) }) },
+        },
+        {
+          provide: getModelToken(ListaCompras.name),
+          useValue: {
+            find: vi.fn().mockReturnValue({
+              exec: vi.fn().mockResolvedValue([
+                {
+                  alocacoes: [{ alimentoId: ALIMENTO_ID, rateios: [{ empenhoId: 'emp-tardio', quantidade: 25 }] }],
+                  consolidado: [],
+                },
+              ]),
+            }),
+          },
+        },
+      ],
+    }).compile();
+    const service = module.get(EmpenhosService);
+    const [saldo] = await service.saldoConcorrente(CONTRATO_ID);
+    expect(saldo?.empenhos.map((atual) => atual.empenhoId)).toEqual(['emp-cedo', 'emp-tardio']);
+    expect(saldo).toMatchObject({
+      alimentoId: ALIMENTO_ID,
+      qtdTotalLicitada: 100,
+      qtdEmpenhada: 100,
+      qtdAlocada: 25,
+      qtdDisponivel: 0,
+    });
+    expect(saldo?.empenhos[0]).toMatchObject({ empenhoId: 'emp-cedo', saldoDisponivel: 40 });
+    expect(saldo?.empenhos[1]).toMatchObject({ empenhoId: 'emp-tardio', qtdAlocada: 25, saldoDisponivel: 35 });
   });
 });

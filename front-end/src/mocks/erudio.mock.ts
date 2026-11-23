@@ -294,4 +294,3 @@ export function diaErudioNaData(erudioUnidadeEnsinoId: number | null, data: stri
   if (erudioUnidadeEnsinoId == null || erudioUnidadeEnsinoId === ERUDIO_SME_INSTITUICAO_ID) return undefined
   return calendarioErudio.find((dia) => dia.data === data && dia.erudioUnidadeEnsinoId === null)
 }
-}

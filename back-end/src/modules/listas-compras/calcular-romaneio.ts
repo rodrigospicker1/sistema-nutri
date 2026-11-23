@@ -72,6 +72,8 @@ export interface EmpenhoCalculo {
   contratoHortiId: string;
   numeroEmpenho: string;
   ativo: boolean;
+  /** Vigência final — ordena o rateio sugerido (vence primeiro, consome primeiro). */
+  dataFim?: Date;
   itensEmpenhados: ItemEmpenhoCalculo[];
 }
 
@@ -173,6 +175,9 @@ export interface AlocacaoCalculo {
 
 export interface EntradaRomaneio {
   datasSelecionadas: string[];
+  /** Escopo opcional: restringe o cálculo a estas etapas/unidades (ausente/vazio = todas). */
+  erudioEtapaIds?: number[];
+  erudioUnidadeEnsinoIds?: number[];
   dias: DiaConsumoCalculo[];
   fichas: FichaCalculo[];
   alimentos: AlimentoCalculo[];
@@ -207,6 +212,8 @@ export interface ItemPendente {
   saldoDisponivel?: number;
   quantidadeAlocada?: number;
   unidadeMedida?: string;
+  /** Soma dos saldos de todos os candidatos do alimento (RATEIO_INSUFICIENTE). */
+  saldoTotalDisponivel?: number;
 }
 
 export interface SubstituicaoAplicada {
@@ -237,6 +244,7 @@ export interface CandidatoEmpenho {
   numeroEmpenho: string;
   valorUnitario: number;
   saldoDisponivel: number;
+  dataFim?: Date;
 }
 
 export interface AlocacaoItemConsolidado {
@@ -259,6 +267,8 @@ export interface ItemConsolidado {
   alocacoes: AlocacaoItemConsolidado[];
   totalAlocado: number;
   valorTotal: number;
+  /** true quando `alocacoes` veio da sugestão automática (sem rateio manual). */
+  rateioSugerido?: boolean;
 }
 
 export interface ResultadoRomaneio {
@@ -267,6 +277,12 @@ export interface ResultadoRomaneio {
   itensPendentes: ItemPendente[];
   consolidado: ItemConsolidado[];
   romaneio: RomaneioEscola[];
+  /**
+   * Rateios efetivamente aplicados por alimento (manuais ou sugeridos).
+   * É o que deve ser persistido em `ListaCompras.alocacoes` para que as
+   * listas confirmadas abatam o saldo dos empenhos.
+   */
+  alocacoesEfetivas: AlocacaoCalculo[];
 }
 
 interface Porcao {
@@ -408,9 +424,30 @@ function arredondar(valor: number): number {
  * eles medem ganho/perda de água no preparo e definem o peso pronto servido
  * (porção do cardápio), não a quantidade a comprar.
  */
+/**
+ * Aplica o escopo opcional (etapas/unidades) à entrada: filtra os dias de
+ * cardápio por etapa, e as demandas/matrículas por etapa e unidade. O
+ * consolidado e o romaneio passam a refletir apenas as escolas selecionadas —
+ * filtrar unidades pode quebrar pares de contraturno (a outra unidade some).
+ */
+function filtrarEscopo(entrada: EntradaRomaneio): EntradaRomaneio {
+  const etapas = entrada.erudioEtapaIds?.length ? new Set(entrada.erudioEtapaIds) : null;
+  const unidades = entrada.erudioUnidadeEnsinoIds?.length ? new Set(entrada.erudioUnidadeEnsinoIds) : null;
+  if (!etapas && !unidades) return entrada;
+  const naEtapa = (etapa: number) => !etapas || etapas.has(etapa);
+  const naUnidade = (unidade: number) => !unidades || unidades.has(unidade);
+  return {
+    ...entrada,
+    dias: entrada.dias.filter((dia) => naEtapa(dia.erudioEtapaId)),
+    demandas: entrada.demandas.filter((demanda) => naEtapa(demanda.erudioEtapaId) && naUnidade(demanda.erudioUnidadeEnsinoId)),
+    matriculas: entrada.matriculas?.filter((matricula) => naEtapa(matricula.erudioEtapaId) && naUnidade(matricula.erudioUnidadeEnsinoId)),
+  };
+}
+
 export function calcularRomaneio(entrada: EntradaRomaneio): ResultadoRomaneio {
   assertUnidadesEmpenhoContrato(entrada);
-  const selecionadas = new Set(entrada.datasSelecionadas);
+  const dados = filtrarEscopo(entrada);
+  const selecionadas = new Set(dados.datasSelecionadas);
   const datasIgnoradas: string[] = [];
   const porcoes: Porcao[] = [];
   const fichas = new Map(entrada.fichas.map((ficha) => [ficha.id, ficha]));
@@ -420,7 +457,7 @@ export function calcularRomaneio(entrada: EntradaRomaneio): ResultadoRomaneio {
   );
   const empenhos = new Map(entrada.empenhos.map((empenho) => [empenho.id, empenho]));
 
-  for (const dia of entrada.dias) {
+  for (const dia of dados.dias) {
     if (!selecionadas.has(dia.data)) continue;
     if (TIPOS_DIA_SEM_CONSUMO.includes(dia.tipoDia as (typeof TIPOS_DIA_SEM_CONSUMO)[number])) {
       datasIgnoradas.push(dia.data);
@@ -488,7 +525,7 @@ export function calcularRomaneio(entrada: EntradaRomaneio): ResultadoRomaneio {
     return new Set(regras.map((regra) => regra.refeicaoId));
   };
 
-  const granular = montarDemandasGranulares(entrada, refeicoesPermitidas, porcoes);
+  const granular = montarDemandasGranulares(dados, refeicoesPermitidas, porcoes);
   const adaptacoesPorId = new Map((entrada.adaptacoes ?? []).map((adaptacao) => [adaptacao.id, adaptacao]));
 
   const expandirItensOverride = (itens: ItemRefeicaoCalculo[]): Array<{ alimentoId: string; gramas: number }> => {
@@ -578,7 +615,7 @@ export function calcularRomaneio(entrada: EntradaRomaneio): ResultadoRomaneio {
       if (escola) escola.alunosAtivos = alunos.size;
     }
   } else {
-    for (const demanda of entrada.demandas) {
+    for (const demanda of dados.demandas) {
     const permitidas = refeicoesPermitidas(demanda);
     const porcoesEtapa = porcoes.filter((porcao) => {
       if (porcao.erudioEtapaId !== demanda.erudioEtapaId) return false;
@@ -685,8 +722,8 @@ export function calcularRomaneio(entrada: EntradaRomaneio): ResultadoRomaneio {
   const alocacoesEntrada = new Map(
     (entrada.alocacoes ?? []).map((alocacao) => [alocacao.alimentoId, alocacao.rateios]),
   );
-  const validarRateios = entrada.alocacoes !== undefined;
 
+  const alocacoesEfetivas: AlocacaoCalculo[] = [];
   const consolidado: ItemConsolidado[] = [];
   for (const total of totais.values()) {
     const itemContrato = contrato.get(total.alimentoId);
@@ -704,6 +741,7 @@ export function calcularRomaneio(entrada: EntradaRomaneio): ResultadoRomaneio {
           numeroEmpenho: empenho.numeroEmpenho,
           valorUnitario: itemEmpenho?.valorUnitario ?? itemContrato.valorUnitario,
           saldoDisponivel: saldoEmpenho(empenho.id, total.alimentoId),
+          dataFim: empenho.dataFim,
         };
       });
 
@@ -720,7 +758,12 @@ export function calcularRomaneio(entrada: EntradaRomaneio): ResultadoRomaneio {
     const alocacoes: AlocacaoItemConsolidado[] = [];
     let totalAlocado = 0;
     let valorTotal = 0;
-    const rateios = alocacoesEntrada.get(total.alimentoId) ?? [];
+    const rateiosManuais = alocacoesEntrada.get(total.alimentoId) ?? [];
+    // Sem rateio manual para o alimento, o motor sugere a divisão: empenho que
+    // vence primeiro (dataFim) consome primeiro, até cobrir a demanda ou o saldo.
+    const rateiosSugeridos = rateiosManuais.length === 0 ? sugerirRateios(candidatos, quantidadePedida) : [];
+    const rateios = rateiosManuais.length > 0 ? rateiosManuais : rateiosSugeridos;
+    const rateioSugerido = rateiosSugeridos.length > 0;
     for (const rateio of rateios) {
       if (!rateio || !(rateio.quantidade > 0)) continue;
       const candidato = candidatos.find((item) => item.empenhoId === rateio.empenhoId);
@@ -762,7 +805,9 @@ export function calcularRomaneio(entrada: EntradaRomaneio): ResultadoRomaneio {
       });
     }
 
-    if (validarRateios && totalAlocado < quantidadePedida) {
+    // Déficit: há empenho candidato mas o saldo total não cobre a demanda —
+    // vale para rateio manual e sugerido (alerta de saldo insuficiente).
+    if (candidatos.length > 0 && totalAlocado < quantidadePedida) {
       pendencias.push({
         alimentoId: total.alimentoId,
         nome: nomeAlimento,
@@ -770,7 +815,15 @@ export function calcularRomaneio(entrada: EntradaRomaneio): ResultadoRomaneio {
         motivo: 'RATEIO_INSUFICIENTE',
         quantidadeNecessaria: quantidadePedida,
         quantidadeAlocada: totalAlocado,
+        saldoTotalDisponivel: arredondar(candidatos.reduce((soma, c) => soma + c.saldoDisponivel, 0)),
         unidadeMedida: itemContrato.unidadeMedida,
+      });
+    }
+
+    if (alocacoes.length > 0) {
+      alocacoesEfetivas.push({
+        alimentoId: total.alimentoId,
+        rateios: alocacoes.map((alocacao) => ({ empenhoId: alocacao.empenhoId, quantidade: alocacao.quantidade })),
       });
     }
 
@@ -784,6 +837,7 @@ export function calcularRomaneio(entrada: EntradaRomaneio): ResultadoRomaneio {
       alocacoes,
       totalAlocado,
       valorTotal,
+      rateioSugerido,
     });
   }
 
@@ -793,7 +847,33 @@ export function calcularRomaneio(entrada: EntradaRomaneio): ResultadoRomaneio {
     itensPendentes: pendencias,
     consolidado,
     romaneio: [...romaneio.values()].filter((escola) => escola.itens.length > 0 || escola.substituicoesAplicadas.length > 0),
+    alocacoesEfetivas,
   };
+}
+
+/**
+ * Rateio sugerido: distribui `necessario` entre os candidatos do alimento,
+ * esgotando o saldo de cada um na ordem de vencimento do empenho
+ * (`dataFim` ascendente; sem dataFim por último, desempate por numeroEmpenho).
+ * Nunca excede o saldo de um candidato — déficit vira RATEIO_INSUFICIENTE.
+ */
+function sugerirRateios(candidatos: CandidatoEmpenho[], necessario: number): RateioEmpenhoCalculo[] {
+  const ordenados = [...candidatos].sort((a, b) => {
+    const fimA = a.dataFim?.getTime() ?? Number.POSITIVE_INFINITY;
+    const fimB = b.dataFim?.getTime() ?? Number.POSITIVE_INFINITY;
+    if (fimA !== fimB) return fimA - fimB;
+    return a.numeroEmpenho.localeCompare(b.numeroEmpenho) || a.empenhoId.localeCompare(b.empenhoId);
+  });
+  const rateios: RateioEmpenhoCalculo[] = [];
+  let restante = necessario;
+  for (const candidato of ordenados) {
+    if (restante <= 0) break;
+    const quantidade = arredondar(Math.min(candidato.saldoDisponivel, restante));
+    if (quantidade <= 0) continue;
+    rateios.push({ empenhoId: candidato.empenhoId, quantidade });
+    restante = arredondar(restante - quantidade);
+  }
+  return rateios;
 }
 
 function somarGramas(

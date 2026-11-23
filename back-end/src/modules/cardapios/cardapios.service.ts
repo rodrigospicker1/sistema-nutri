@@ -34,12 +34,18 @@ function dataDoDia(mes: number, ano: number, numeroSemana: number, diaSemana: nu
   const primeiro = new Date(Date.UTC(ano, mes - 1, 1));
   const segundaDaSemana1 = new Date(primeiro);
   segundaDaSemana1.setUTCDate(primeiro.getUTCDate() - ((primeiro.getUTCDay() + 6) % 7));
+  const sextaDaSemana1 = new Date(segundaDaSemana1);
+  sextaDaSemana1.setUTCDate(segundaDaSemana1.getUTCDate() + 4);
+  while (sextaDaSemana1 < primeiro) {
+    segundaDaSemana1.setUTCDate(segundaDaSemana1.getUTCDate() + 7);
+    sextaDaSemana1.setUTCDate(sextaDaSemana1.getUTCDate() + 7);
+  }
   const data = new Date(segundaDaSemana1);
   data.setUTCDate(segundaDaSemana1.getUTCDate() + (numeroSemana - 1) * 7 + (diaSemana - 1));
   return data;
 }
 
-function comDatasReais(dias: DiaCardapio[], mes?: number, ano?: number): DiaCardapio[] {
+export function comDatasReais(dias: DiaCardapio[], mes?: number, ano?: number): DiaCardapio[] {
   if (!mes || !ano) return dias;
   return dias.map((dia) => ({ ...dia, data: dataDoDia(mes, ano, dia.numeroSemana, dia.diaSemana) }));
 }

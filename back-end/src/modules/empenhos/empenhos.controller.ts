@@ -30,6 +30,18 @@ export class EmpenhosController {
     return this.empenhosService.saldoDisponivel(contratoHortiId);
   }
 
+  @Get('saldo-concorrente')
+  @ApiOperation({ summary: 'Saldo por empenho em todos os contratos ativos (sem filtro de contrato)' })
+  saldoConcorrenteGeral() {
+    return this.empenhosService.saldoConcorrente();
+  }
+
+  @Get('saldo-concorrente/:contratoHortiId')
+  @ApiOperation({ summary: 'Saldo por empenho: empenhado menos o alocado em listas de compras confirmadas' })
+  saldoConcorrente(@Param('contratoHortiId', ParseObjectIdPipe) contratoHortiId: string) {
+    return this.empenhosService.saldoConcorrente(contratoHortiId);
+  }
+
   @Get('ativos-por-alimento/:alimentoId')
   @ApiOperation({ summary: 'Empenhos ativos que reservam o alimento, para o seletor do cardápio e da lista' })
   ativosPorAlimento(@Param('alimentoId', ParseObjectIdPipe) alimentoId: string) {
